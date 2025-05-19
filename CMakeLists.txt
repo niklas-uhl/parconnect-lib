@@ -1,21 +1,46 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.23)
 
-add_library(parconnect)
+project(parconnect-lib)
+option(PARCONNECT_BUILD_TESTS "Build tests" ${IS_TOP_LEVEL_PROJECT})
+
+find_package(MPI REQUIRED)
 
 include(FetchContent)
 
 FetchContent_Declare(
-    googletest
-    GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG        1.17.0
-)
-FetchContent_MakeAvailable(googletest)
+  mxx
+  GIT_REPOSITORY https://github.com/patflick/mxx
+  GIT_TAG master
+  SYSTEM)
 
-add_executable(test_ccl_coloring 
-    test_ccl_coloring_test.cpp
-)
-target_link_libraries(test_ccl_coloring
-  PRIVATE
+FetchContent_MakeAvailable(mxx)
+
+add_library(easyloggingpp ext/easylogging++.cc)
+target_sources(easyloggingpp PUBLIC FILE_SET HEADERS BASE_DIRS ext FILES
+                                    ext/easylogging++.h)
+target_compile_features(easyloggingpp PUBLIC cxx_std_11)
+
+add_library(parconnect INTERFACE)
+target_link_libraries(parconnect INTERFACE MPI::MPI_CXX)
+target_sources(
   parconnect
-  googletest::gtest
-)
+  INTERFACE FILE_SET
+            HEADERS
+            BASE_DIRS
+            lib
+            FILES
+            coloring/labelProp.hpp
+            coloring/labelProp_utils.hpp
+            coloring/timer.hpp
+            utils/commonfuncs.hpp
+            mxx_extra/sort.hpp
+            mxx_extra/distribution.hpp)
+	  
+target_compile_features(parconnect INTERFACE cxx_std_14)
+
+target_link_libraries(parconnect INTERFACE mxx easyloggingpp)
+
+if(PARCONNECT_BUILD_TESTS)
+  enable_testing()
+  add_subdirectory(test)
+endif()

@@ -27,10 +27,13 @@
 
 //Own includes
 #include "coloring/labelProp.hpp"
+#include <algorithm>
+#include <random>
 
 //External includes
 #include "mxx/comm.hpp"
-#include "gtest.h"
+#include <gtest/gtest.h>
+
 
 INITIALIZE_EASYLOGGINGPP
 
@@ -59,8 +62,9 @@ TEST(connColoring, smallUndirectedChain) {
       edgeList.emplace_back(i+1, i);
     }
   }
-
-  std::random_shuffle(edgeList.begin(), edgeList.end());
+  std::random_device rd;
+  std::mt19937 g(rd());
+  std::shuffle(edgeList.begin(), edgeList.end(), g);
   conn::coloring::ccl<nodeIdType> cclInstance(edgeList, c);
   cclInstance.compute();
   auto component_count = cclInstance.computeComponentCount();
@@ -126,7 +130,10 @@ TEST(connColoring, smallUndirected) {
     }
   }
 
-  std::random_shuffle(edgeList.begin(), edgeList.end());
+  // std::random_shuffle(edgeList.begin(), edgeList.end());
+  std::random_device rd;
+  std::mt19937 g(rd());
+  std::shuffle(edgeList.begin(), edgeList.end(), g);
 
   //Since we have a graph of small size, use less processes
   c.with_subset(c.rank() < 4, [&](const mxx::comm& comm){
@@ -194,7 +201,10 @@ TEST(connColoring, mediumUndirected) {
     }
   }
 
-  std::random_shuffle(edgeList.begin(), edgeList.end());
+  // std::random_shuffle(edgeList.begin(), edgeList.end());
+  std::random_device rd;
+  std::mt19937 g(rd());
+  std::shuffle(edgeList.begin(), edgeList.end(), g);
   conn::coloring::ccl<> cclInstance(edgeList, c);
   cclInstance.compute();
   auto component_count = cclInstance.computeComponentCount();
