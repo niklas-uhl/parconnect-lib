@@ -1,12 +1,13 @@
 cmake_minimum_required(VERSION 3.23)
 
 project(parconnect-lib)
-option(PARCONNECT_BUILD_TESTS "Build tests" ${IS_TOP_LEVEL_PROJECT})
+option(PARCONNECT_BUILD_TESTS "Build tests" ${PROJECT_IS_TOP_LEVEL})
 
 find_package(MPI REQUIRED)
 
 include(FetchContent)
 
+set(MXX_BUILD_TESTS OFF CACHE BOOL "Build tests")
 FetchContent_Declare(
   mxx
   GIT_REPOSITORY https://github.com/patflick/mxx
