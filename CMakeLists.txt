@@ -10,7 +10,7 @@ include(FetchContent)
 set(MXX_BUILD_TESTS OFF CACHE BOOL "Build tests")
 FetchContent_Declare(
   mxx
-  GIT_REPOSITORY https://github.com/patflick/mxx
+  GIT_REPOSITORY https://github.com/niklas-uhl/mxx
   GIT_TAG master
   SYSTEM)
 
