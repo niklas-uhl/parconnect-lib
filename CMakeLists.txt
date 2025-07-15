@@ -14,12 +14,13 @@ FetchContent_Declare(
   GIT_TAG master
   SYSTEM)
 
-FetchContent_MakeAvailable(mxx)
+FetchContent_Declare(
+  spdlog
+  GIT_REPOSITORY https://github.com/gabime/spdlog
+  GIT_TAG v1.15.3
+  SYSTEM)
 
-add_library(easyloggingpp ext/easylogging++.cc)
-target_sources(easyloggingpp PUBLIC FILE_SET HEADERS BASE_DIRS ext FILES
-                                    ext/easylogging++.h)
-target_compile_features(easyloggingpp PUBLIC cxx_std_11)
+FetchContent_MakeAvailable(mxx spdlog)
 
 add_library(parconnect INTERFACE)
 target_link_libraries(parconnect INTERFACE MPI::MPI_CXX)
@@ -39,7 +40,7 @@ target_sources(
 	  
 target_compile_features(parconnect INTERFACE cxx_std_14)
 
-target_link_libraries(parconnect INTERFACE mxx easyloggingpp)
+target_link_libraries(parconnect INTERFACE mxx spdlog::spdlog)
 
 if(PARCONNECT_BUILD_TESTS)
   enable_testing()

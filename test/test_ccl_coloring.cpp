@@ -35,8 +35,6 @@
 #include <gtest/gtest.h>
 
 
-INITIALIZE_EASYLOGGINGPP
-
 /**
  * @brief       coloring of undirected graph with a small chain
  * @details     builds a small undirected chain, 

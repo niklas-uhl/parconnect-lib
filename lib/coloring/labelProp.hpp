@@ -39,7 +39,7 @@
 #include "mxx_extra/sort.hpp"
 #include "mxx_extra/distribution.hpp"
 #include "mxx/comm.hpp"
-#include "easylogging++.h"
+#include "spdlog/spdlog.h"
 
 namespace conn 
 {
@@ -257,8 +257,10 @@ namespace conn
 
             //Log the total count of tuples 
             auto totalTupleCount = mxx::reduce(tupleVector.size(), 0, comm);
-
-            LOG_IF(comm.rank() == 0, INFO) << "Total tuple count is " << totalTupleCount;
+	    
+	    if (comm.rank() == 0) {
+	      SPDLOG_INFO("Total tuple count is {}", totalTupleCount);
+	    }
           }
 
         /**
@@ -279,8 +281,9 @@ namespace conn
 
           while(!converged)
           {
-
-            LOG_IF(comm.rank() == 0, INFO) << "Iteration #" << iterCount + 1;
+	    if (comm.rank() == 0) {
+	      SPDLOG_INFO("Iteration # {}", iterCount + 1);
+	    }
             Timer timer(std::cerr, comm);
 
             //Temporary storage for extra tuples needed for doubling
@@ -347,8 +350,9 @@ namespace conn
 
             iterCount ++;
           }
-
-          LOG_IF(comm.rank() == 0, INFO) << "Algorithm took " << iterCount << " iterations";
+	  if (comm.rank() == 0) {
+	    SPDLOG_INFO("Algorithm took {} iterations", iterCount);
+	  }
         }
 
         /**
@@ -665,8 +669,9 @@ namespace conn
             T minLoad  = mxx::reduce(localWorkLoad, 0, mxx::min<T>() , comm);
             T meanLoad = mxx::reduce(localWorkLoad, 0, std::plus<T>(), comm)/ comm.size();
 
-            auto sep = ",";
-            LOG_IF(comm.rank() == 0, INFO) << "Load distribution of active tuples min-mean-max : " << minLoad << sep << meanLoad << sep << maxLoad;
+	    if (comm.rank() == 0) {
+	      SPDLOG_INFO("Load distribution of active tuples min-mean-max : {},{},{}", minLoad, meanLoad, maxLoad);
+	    }
           }
 
         /**
