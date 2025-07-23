@@ -20,7 +20,13 @@ FetchContent_Declare(
   GIT_TAG v1.15.3
   SYSTEM)
 
-FetchContent_MakeAvailable(mxx spdlog)
+FetchContent_Declare(
+  plfit
+  GIT_REPOSITORY https://github.com/niklas-uhl/plfit
+  GIT_TAG main
+  SYSTEM)
+
+FetchContent_MakeAvailable(mxx spdlog plfit)
 
 add_library(parconnect INTERFACE)
 target_link_libraries(parconnect INTERFACE MPI::MPI_CXX)
@@ -34,13 +40,14 @@ target_sources(
             coloring/labelProp.hpp
             coloring/labelProp_utils.hpp
             coloring/timer.hpp
+	    dynamic/degreeDistInfo.hpp
             utils/commonfuncs.hpp
             mxx_extra/sort.hpp
             mxx_extra/distribution.hpp)
 	  
 target_compile_features(parconnect INTERFACE cxx_std_14)
 
-target_link_libraries(parconnect INTERFACE mxx spdlog::spdlog)
+target_link_libraries(parconnect INTERFACE mxx spdlog::spdlog plfit)
 
 if(PARCONNECT_BUILD_TESTS)
   enable_testing()
