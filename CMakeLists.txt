@@ -41,6 +41,8 @@ target_sources(
             coloring/labelProp_utils.hpp
             coloring/timer.hpp
 	    dynamic/degreeDistInfo.hpp
+	    bfs/bfsRunner.hpp
+	    bfs/timer.hpp
             utils/commonfuncs.hpp
             mxx_extra/sort.hpp
             mxx_extra/distribution.hpp)
