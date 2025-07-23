@@ -1,9 +1,11 @@
 //Own includes
-#include "dynamic/degreeDistInfo.hpp"
 #include <algorithm>
+#include <cstdint>
 #include <random>
+#include "bfs/bfsRunner.hpp"
 
 //External includes
+#include "graphGen/common/reduceIds.hpp"
 #include "mxx/comm.hpp"
 #include <gtest/gtest.h>
 
@@ -12,7 +14,7 @@
  * @details     builds a small test graph with three components, 
  *              test if program returns 3 as the component count
  */
-TEST(bfsDecision, smallUndirected) {
+TEST(bfs, smallUndirected) {
 
   mxx::comm c = mxx::comm();
 
@@ -73,6 +75,10 @@ TEST(bfsDecision, smallUndirected) {
 
   //Since we have a graph of small size, use less processes
   c.with_subset(c.rank() < 4, [&](const mxx::comm &comm) {
-    conn::dynamic::runBFSDecision(edgeList, comm);
+    std::size_t nVertices = 0;
+    conn::graphGen::reduceVertexIds(edgeList, nVertices, comm);
+    conn::bfs::bfsSupport<int64_t> bfsInstance(edgeList, nVertices, comm);
+    std::vector<std::size_t> componentCountsResult;
+    bfsInstance.runBFSIterations(1, componentCountsResult);
   });
 }

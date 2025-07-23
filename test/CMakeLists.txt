@@ -16,3 +16,7 @@ katestrophe_add_mpi_test(test_ccl_coloring CORES 2 4 8)
 katestrophe_add_test_executable(test_bfs_decision FILES test_bfs_decision.cpp)
 target_link_libraries(test_bfs_decision PRIVATE parconnect)
 katestrophe_add_mpi_test(test_bfs_decision CORES 2 4 8)
+
+katestrophe_add_test_executable(test_bfs FILES test_bfs.cpp)
+target_link_libraries(test_bfs PRIVATE parconnect)
+katestrophe_add_mpi_test(test_bfs CORES 2 4 8)

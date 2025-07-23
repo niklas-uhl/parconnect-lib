@@ -36,11 +36,13 @@
 #include "utils/commonfuncs.hpp"
 
 //External includes
-#include "extutils/logging.hpp"
-#include "graph500-gen/make_graph.h"
+// #include "extutils/logging.hpp"
+// #include "graph500-gen/make_graph.h"
 #include "CombBLAS/CombBLAS.h"
 #include "mxx/comm.hpp"
+#include "mxx/sort.hpp"
 #include "mxx/distribution.hpp"
+#include <spdlog/spdlog.h>
 
 
 namespace conn 
@@ -69,15 +71,15 @@ namespace conn
 
           //Matrix type, to store the adjacency matrix (bool values)
           //from combBLAS implementation 
-          using booleanMatrixType = SpParMat <E, bool, SpDCCols<E ,bool> >;
+	  using booleanMatrixType = combblas::SpParMat <E, bool, combblas::SpDCCols<E ,bool> >;
 
           //Matrix type, to store the adjacency matrix (int values)
           //from combBLAS implementation 
-          using integerMatrixType = SpParMat <E, E, SpDCCols<E, E> >;
+	  using integerMatrixType = combblas::SpParMat <E, E, combblas::SpDCCols<E, E> >;
 
           //Optimization buffer (used as a parameter in combBLAS function calls)
           //TODO: Generalize these types
-          OptBuf<int32_t, int64_t> optbuf;
+          combblas::OptBuf<int32_t, int64_t> optbuf;
 
           //Record MTEPS score of each iteration
           std::vector<double> MTEPS;
@@ -90,7 +92,7 @@ namespace conn
 
           //Degrees of each vertex (useful while computing MTEPS score)
           //TODO : Construct this member using the communicator of this class
-          FullyDistVec<E, E> degrees;
+          combblas::FullyDistVec<E, E> degrees;
 
           //For convenience, define the maximum value 
           E MAX = std::numeric_limits<E>::max();
@@ -109,23 +111,23 @@ namespace conn
          *                        TODO : Enable the communicator restriction on all the BFS functions
          */
         bfsSupport(std::vector< std::pair<E, E> > &_edgeList, std::size_t vertexCount,
-                  const mxx::comm &_comm) : edgeList(_edgeList), comm(_comm.copy()), A(comm), degrees(comm)
+		   const mxx::comm &_comm) : edgeList(_edgeList), comm(_comm.copy()), A(comm), degrees(A.getcommgrid())
         {
           //List of edges, distributed in 1D fashion
-          DistEdgeList<E> *DEL = new DistEdgeList<E>();
+	  // combblas::DistEdgeList<E> *DEL = new combblas::DistEdgeList<E>();
 
           //Copy our edgeList to CombBLAS format of edgeList
-          DEL->GenGraphData(edgeList, vertexCount);
+          // DEL->GenGraphData(edgeList, vertexCount);
 
           comm.barrier();
 
-          integerMatrixType *G = new integerMatrixType(*DEL, false); 
-          delete DEL;	// free memory
+          integerMatrixType *G = new integerMatrixType(edgeList, vertexCount, comm, false); 
+          // delete DEL;	// free memory
 
           comm.barrier();
 
           //Compute the vertex degrees
-          G->Reduce(degrees, Row, plus<E>(), static_cast<E>(0));	// Identity is 0 
+          G->Reduce(degrees, combblas::Row, plus<E>(), static_cast<E>(0));	// Identity is 0 
 
           comm.barrier();
 
@@ -140,7 +142,7 @@ namespace conn
           comm.barrier();
 
           //Helper to initialize the unvisited vertices buffer
-          FullyDistVec<E,E> tmp(A.getcommgrid(), A.getncol(), (E)-1);
+	  combblas::FullyDistVec<E,E> tmp(A.getcommgrid(), A.getncol(), (E)-1);
 
           //Record the local array size
           localDistVecSize = tmp.LocArrSize();
@@ -156,8 +158,10 @@ namespace conn
 
           //Print the size of map
           auto localSize = unVisitedVertices.size();
-          auto totalSize = mxx::reduce(localSize, 0, std::plus<size_t>(), comm); 
-          LOG_IF(comm.rank() == 0, INFO) << "BFS_DEBUG size of map -> " << totalSize;
+          auto totalSize = mxx::reduce(localSize, 0, std::plus<size_t>(), comm);
+          if (comm.rank() == 0) {
+	    SPDLOG_INFO("BFS_DEBUG size of map -> {}", totalSize);
+          }
         }
 
         /**
@@ -175,7 +179,7 @@ namespace conn
           for(int i = 0; i < noIterations; i++) 
           {
             //Parent array (acts as a list of vertices in a component for us)
-            FullyDistVec<E, E> parents(A.getcommgrid(), A.getncol(), (E) -1);	// numerical values are stored 0-based
+	    combblas::FullyDistVec<E, E> parents(A.getcommgrid(), A.getncol(), (E) -1);	// numerical values are stored 0-based
 
             //Exscan of vertex count kept on previous ranks
             E offsetForLocalToGlobal = mxx::exscan(localDistVecSize, comm);
@@ -183,17 +187,21 @@ namespace conn
             //Get the source vertex
             E srcPoint = getSource(offsetForLocalToGlobal);
 
-            LOG_IF(comm.rank() == 0, INFO) << "BFS_DEBUG getSource -> " << srcPoint;
+            if (comm.rank() == 0) {
+	      SPDLOG_INFO("BFS_DEBUG getSource -> {}", srcPoint);
+            }
 
             //If all vertices are visited, then exit
             if(srcPoint == MAX)
             {
-              LOG_IF(comm.rank() == 0, INFO) << "All vertices already covered, no more BFS iterations required";
+              if (comm.rank() == 0) {
+		SPDLOG_INFO("All vertices already covered, no more BFS iterations required");
+              }
               return i;
             }
 
             //Frontier
-            FullyDistSpVec<E, E> fringe(A.getcommgrid(), A.getncol());	// numerical values are stored 0-based
+	    combblas::FullyDistSpVec<E, E> fringe(A.getcommgrid(), A.getncol());	// numerical values are stored 0-based
 
             //Barrier
             MPI_Barrier(comm);
@@ -203,7 +211,10 @@ namespace conn
             parents.SetElement(srcPoint, srcPoint);
 
             //Remove the source vertex from our vertex set
-            fringe.removeFromHash(unVisitedVertices);
+            // fringe.removeFromHash(unVisitedVertices);
+            for (auto e : fringe.GetLocalInd()) {
+	      unVisitedVertices.erase(e);
+            }
 
             //Set to 1 as we include the source
             std::size_t trackCountOfVerticesVisited = 1;
@@ -226,7 +237,10 @@ namespace conn
               parents.Set(fringe);
 
               //Remove the newly visited elements from our map of vertices
-              fringe.removeFromHash(unVisitedVertices);
+              // fringe.removeFromHash(unVisitedVertices);
+	      for (auto e : fringe.GetLocalInd()) {
+		unVisitedVertices.erase(e);
+	      }
               trackCountOfVerticesVisited += fringe.getnnz();
             }
 
@@ -235,14 +249,16 @@ namespace conn
 
             comm.barrier();
 
-            FullyDistSpVec<E, E> parentsp = parents.Find(std::bind2nd(std::greater<E>(), -1));
-            parentsp.Apply(myset<E>(1));
+	    combblas::FullyDistSpVec<E, E> parentsp = parents.Find(std::bind(std::greater<E>(), std::placeholders::_1, -1));
+            parentsp.Apply(combblas::myset<E>(1));
 
             //Number of edges traversed
             //std::size_t nEdgesTraversed = EWiseMult(parentsp, degrees, false, 0).Reduce(plus<E>(), 0);
             E nEdgesTraversed = EWiseMult(parentsp, degrees, false, (E) 0).Reduce(plus<E>(), (E) 0);
 
-            LOG_IF(comm.rank() == 0, INFO) << "BFS_DEBUG nEdgeTraversed -> " << nEdgesTraversed;
+            if (comm.rank() == 0) {
+	      SPDLOG_INFO("BFS_DEBUG nEdgeTraversed -> {}", nEdgesTraversed);
+            }
 
             //Record the end time of this BFS iteration
             timePoint t2 = clock::now(); 
@@ -351,8 +367,10 @@ namespace conn
             mxx::distribute_inplace(edgeList, comm);
           });
 
-          auto newEdgeListSize = graphGen::globalSizeOfVector(edgeList, comm);;
-          LOG_IF(comm.rank() == 0, INFO) << "Edge count remaining after BFS " << newEdgeListSize;
+          auto newEdgeListSize = graphGen::globalSizeOfVector(edgeList, comm);
+          if (comm.rank() == 0) {
+	    SPDLOG_INFO("Edge count remaining after BFS {}", newEdgeListSize);
+          }
 
         }
 

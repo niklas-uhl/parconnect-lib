@@ -26,7 +26,13 @@ FetchContent_Declare(
   GIT_TAG main
   SYSTEM)
 
-FetchContent_MakeAvailable(mxx spdlog plfit)
+FetchContent_Declare(
+  CombBLAS
+  GIT_REPOSITORY https://github.com/niklas-uhl/combblas
+  GIT_TAG master
+  SYSTEM)
+
+FetchContent_MakeAvailable(mxx spdlog plfit CombBLAS)
 
 add_library(parconnect INTERFACE)
 target_link_libraries(parconnect INTERFACE MPI::MPI_CXX)
@@ -43,13 +49,16 @@ target_sources(
 	    dynamic/degreeDistInfo.hpp
 	    bfs/bfsRunner.hpp
 	    bfs/timer.hpp
+	    graphGen/common/reduceIds.hpp
+	    graphGen/common/utils.hpp
+	    hash/invertible_hash.hpp
             utils/commonfuncs.hpp
             mxx_extra/sort.hpp
             mxx_extra/distribution.hpp)
 	  
 target_compile_features(parconnect INTERFACE cxx_std_14)
 
-target_link_libraries(parconnect INTERFACE mxx spdlog::spdlog plfit)
+target_link_libraries(parconnect INTERFACE mxx spdlog::spdlog plfit CombBLAS)
 
 if(PARCONNECT_BUILD_TESTS)
   enable_testing()
