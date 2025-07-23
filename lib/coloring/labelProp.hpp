@@ -91,7 +91,7 @@ namespace conn
          * @param[in] c           mpi communicator for the execution 
          */
         template <typename E>
-        ccl(std::vector<std::pair<E,E>> &edgeList, const mxx::comm &c) : comm(c.copy()) 
+        ccl(std::vector<std::pair<E,E>> const& edgeList, const mxx::comm &c) : comm(c.copy()) 
         {
           //nodeIdType and E should match
           //If they don't, modify the class type or the edgeList type
@@ -137,6 +137,10 @@ namespace conn
           componentCount = mxx::allreduce(componentCount, mxx::max<std::size_t>(), comm);
 
           return componentCount;
+        }
+
+        auto const& getTupleVector() const {
+          return tupleVector;
         }
 
         /**
@@ -243,7 +247,7 @@ namespace conn
          *            We ignore the bucket splits across ranks here, because that shouldn't affect the correctness and complexity
          */
         template <typename edgeListPairsType>
-          void convertEdgeListforCCL(edgeListPairsType &edgeList)
+          void convertEdgeListforCCL(edgeListPairsType const& edgeList)
           {
             Timer timer(std::cerr, comm);
 
