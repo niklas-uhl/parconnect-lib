@@ -48,6 +48,9 @@ namespace conn
         ForwardIterator it2 = second;
 
         ForwardIterator start = first;
+        if (comp(val, *start)) {
+	  return std::make_pair(start, start);
+        }
 
         for(; start != second ; start++)
         {

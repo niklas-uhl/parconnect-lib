@@ -92,7 +92,7 @@ namespace conn
      * @brief   returns the global size of the vector
      */
     template <typename vectorType>
-      std::size_t globalSizeOfVector(vectorType &v, mxx::comm &comm)
+      std::size_t globalSizeOfVector(vectorType const&v, mxx::comm const&comm)
       {
         std::size_t localSize = v.size();
         return mxx::allreduce(localSize, std::plus<std::size_t>());

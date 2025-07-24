@@ -113,6 +113,7 @@ namespace conn
         bfsSupport(std::vector< std::pair<E, E> > &_edgeList, std::size_t vertexCount,
 		   const mxx::comm &_comm) : edgeList(_edgeList), comm(_comm.copy()), A(comm), degrees(A.getcommgrid())
         {
+	  mxx::stable_distribute_inplace(edgeList, comm);
           //List of edges, distributed in 1D fashion
 	  // combblas::DistEdgeList<E> *DEL = new combblas::DistEdgeList<E>();
 

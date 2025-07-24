@@ -8,6 +8,7 @@
 #include "graphGen/common/reduceIds.hpp"
 #include "mxx/comm.hpp"
 #include <gtest/gtest.h>
+#include <spdlog/spdlog.h>
 
 /**
  * @brief       coloring of undirected graph with 3 components
@@ -80,5 +81,10 @@ TEST(bfs, smallUndirected) {
     conn::bfs::bfsSupport<int64_t> bfsInstance(edgeList, nVertices, comm);
     std::vector<std::size_t> componentCountsResult;
     bfsInstance.runBFSIterations(1, componentCountsResult);
+    auto edge_list_size = conn::graphGen::globalSizeOfVector(edgeList, comm);
+    if (comm.rank() == 0) {
+      SPDLOG_INFO("Edge count before BFS {}", edge_list_size);
+    }
+    bfsInstance.filterEdgeList();
   });
 }
