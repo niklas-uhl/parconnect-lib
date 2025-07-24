@@ -24,12 +24,14 @@ FetchContent_Declare(
   plfit
   GIT_REPOSITORY https://github.com/niklas-uhl/plfit
   GIT_TAG main
+  EXCLUDE_FROM_ALL
   SYSTEM)
 
 FetchContent_Declare(
   CombBLAS
   GIT_REPOSITORY https://github.com/niklas-uhl/combblas
   GIT_TAG master
+  EXCLUDE_FROM_ALL
   SYSTEM)
 
 FetchContent_MakeAvailable(mxx spdlog plfit CombBLAS)
