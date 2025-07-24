@@ -214,7 +214,7 @@ namespace conn
             //Remove the source vertex from our vertex set
             // fringe.removeFromHash(unVisitedVertices);
             for (auto e : fringe.GetLocalInd()) {
-              visit_vertex(srcPoint, e);
+              visit_vertex(srcPoint, e + offsetForLocalToGlobal);
               unVisitedVertices.erase(e);
             }
 
@@ -241,7 +241,7 @@ namespace conn
               //Remove the newly visited elements from our map of vertices
               // fringe.removeFromHash(unVisitedVertices);
               for (auto e : fringe.GetLocalInd()) {
-                visit_vertex(srcPoint, e);
+                visit_vertex(srcPoint, e + offsetForLocalToGlobal);
                 unVisitedVertices.erase(e);
               }
               trackCountOfVerticesVisited += fringe.getnnz();
