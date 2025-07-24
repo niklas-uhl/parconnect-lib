@@ -68,9 +68,10 @@ namespace conn
         //This is the communicator which participates for computing the components
         mxx::comm comm;
 
-      private:
 
+    public:
         using T = std::tuple<pIdtype, pIdtype, nodeIdType>;
+    private:
         std::vector<T> tupleVector;
 
         //Used during initialization of <Pn>
