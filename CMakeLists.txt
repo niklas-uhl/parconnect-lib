@@ -60,7 +60,7 @@ target_sources(
 	  
 target_compile_features(parconnect INTERFACE cxx_std_14)
 
-target_link_libraries(parconnect INTERFACE mxx spdlog::spdlog plfit CombBLAS)
+target_link_libraries(parconnect INTERFACE mxx::mxx spdlog::spdlog plfit CombBLAS)
 
 if(PARCONNECT_BUILD_TESTS)
   enable_testing()
