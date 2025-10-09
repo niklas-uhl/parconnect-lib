@@ -37,4 +37,4 @@
 
 # End of https://www.toptal.com/developers/gitignore/api/c++
 /build/
-/myeasylog.log
+/.cache/
