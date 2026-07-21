@@ -134,7 +134,7 @@ namespace conn
         {
           const int SRC = 0, COUNT = 1;
 
-          for(auto it = boundaryVertexDegrees.begin(); it != boundaryVertexDegrees.end();)
+          for(auto it = globalBoundaryVertexDegrees.begin(); it != globalBoundaryVertexDegrees.end();)
           {
             auto equalSrcRange = conn::utils::findRange(it, globalBoundaryVertexDegrees.end(), *it, conn::utils::TpleComp<SRC>());
           
