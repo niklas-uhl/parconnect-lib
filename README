@@ -1,3 +1,32 @@
 This is a fork of https://github.com/ParBLiSS/parconnect, which removes most benchmarking code to provide a reusable library just containing the actual algorithm and its dependencies.
 
 This also tries to fix some bugs and modernize the build process.
+
+de Bruijn graph generator
+-------------------------
+
+`lib/graphGen/deBruijn/deBruijnGraphGen.hpp` is upstream's de Bruijn graph
+generator: it builds the k=31 de Bruijn graph of a DNA read file with BLISS and
+returns it as a distributed edge list. It is kept out of the `parconnect` target
+because BLISS is a heavy dependency that nothing else needs -- enable
+`PARCONNECT_ENABLE_DEBRUIJN` and link `parconnect::debruijn` instead.
+
+`tools/dbg2parhip` wraps it into a converter, replacing upstream's
+`utils_exportBinaryFormat` (which wrote one ad-hoc binary file per rank):
+
+    mpirun -n <p> ./tools/dbg2parhip reads.fastq graph.parhip
+
+The input needs a `.fastq` or `.fasta` extension -- BLISS dispatches its parser
+on that -- and must be uncompressed, with the DNA alphabet restricted to
+{A,C,G,T}. The output is a single ParHiP graph, so any KaGen consumer can read
+it back with `file;filename=graph.parhip;input_format=parhip`.
+
+The tool compacts the packed-31-mer vertex ids to [0, n) (upstream's
+`reduceVertexIds`), repartitions the edges so that each rank owns a contiguous
+vertex block with all of its edges, and drops duplicate and self edges. The
+result does not depend on the number of ranks: the output file is byte-identical
+for any `p`.
+
+Both options default to ON for a top-level build and OFF when this project is
+consumed via `FetchContent`, so a consumer of the connectivity algorithm alone
+pulls in neither BLISS nor KaGen.
