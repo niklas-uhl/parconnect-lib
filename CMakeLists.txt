@@ -73,7 +73,7 @@ target_link_libraries(parconnect INTERFACE mxx::mxx spdlog::spdlog plfit CombBLA
 if(PARCONNECT_ENABLE_DEBRUIJN)
   FetchContent_Declare(
     bliss
-    GIT_REPOSITORY https://github.com/niklas-uhl/bliss
+    GIT_REPOSITORY https://github.com/niklas-uhl/kmerind
     GIT_TAG main
     GIT_SHALLOW ON
     EXCLUDE_FROM_ALL
