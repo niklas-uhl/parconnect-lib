@@ -1,6 +1,6 @@
 /**
  * @file    dbg2parhip.cpp
- * @brief   Builds the de Bruijn graph of a DNA read file and writes it out as ParHiP.
+ * @brief   Builds the de Bruijn graph of DNA read files and writes it out as ParHiP.
  *
  * This is ParConnect's `utils_exportBinaryFormat` reduced to its de Bruijn input mode,
  * with the ad-hoc per-rank binary edge list output replaced by a direct KaGen ParHiP
@@ -12,6 +12,7 @@
 #include <mpi.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cstdint>
 #include <functional>
 #include <string>
@@ -26,6 +27,7 @@
 #include <mxx/reduction.hpp>
 
 #include <CLI/CLI.hpp>
+#include <spdlog/fmt/ranges.h>
 #include <spdlog/spdlog.h>
 #include <spdlog/stopwatch.h>
 
@@ -51,6 +53,15 @@ std::size_t global_sum(const std::size_t local, const mxx::comm& comm) {
   return mxx::allreduce(local, std::plus<std::size_t>(), comm);
 }
 
+//! Lower case extension of `path`, without the dot.
+std::string extension(const std::string& path) {
+  const auto  dot = path.rfind('.');
+  std::string ext = dot == std::string::npos ? std::string{} : path.substr(dot + 1);
+  std::transform(ext.begin(), ext.end(), ext.begin(),
+                 [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+  return ext;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -61,14 +72,26 @@ int main(int argc, char** argv) {
     mxx::comm comm;
 
     CLI::App app{
-        "Build the k=31 de Bruijn graph of a DNA read file and write it as a ParHiP graph."};
+        "Build the k=31 de Bruijn graph of DNA read files and write it as a ParHiP graph."};
 
-    std::string input;
-    std::string output;
-    app.add_option("input", input, "Input sequence file. Must have a .fastq or .fasta extension.")
+    // BLISS dispatches its sequence parser on the file extension, and the generator fixes
+    // that parser to FASTQ, so a .fasta input makes build() throw on every rank. Reject it
+    // here, where the message is readable.
+    const auto fastq_file = [](const std::string& f) -> std::string {
+      return extension(f) == "fastq" ? std::string{} : "not a .fastq file: " + f;
+    };
+
+    // Both files are named options: with a variadic input list, a positional output is
+    // ambiguous, and forgetting it would silently overwrite the last input.
+    std::vector<std::string> inputs;
+    std::string              output;
+    app.add_option("-i,--input", inputs,
+                   "Input sequence files. Must have a .fastq extension. Multiple files are "
+                   "built into a single graph, exactly as their concatenation would be.")
         ->required()
-        ->check(CLI::ExistingFile);
-    app.add_option("output", output, "Output path for the ParHiP graph.")->required();
+        ->check(CLI::ExistingFile)
+        ->check(fastq_file, "FASTQ");
+    app.add_option("-o,--output", output, "Output path for the ParHiP graph.")->required();
 
     bool quiet = false;
     app.add_flag("-q,--quiet", quiet, "Only report errors.");
@@ -99,10 +122,11 @@ int main(int argc, char** argv) {
     std::vector<Edge> edges;
     {
       conn::graphGen::deBruijnGraph generator;
-      generator.populateEdgeList(edges, input, comm);
+      generator.populateEdgeList(edges, inputs, comm);
     }
     const std::size_t directed_edges = global_sum(edges.size(), comm);
-    log(fmt::format("Built de Bruijn graph: {} directed edges in {:.3}s", directed_edges, phase));
+    log(fmt::format("Built de Bruijn graph of {}: {} directed edges in {:.3}s",
+                    fmt::join(inputs, ", "), directed_edges, phase));
 
     if (directed_edges < static_cast<std::size_t>(comm.size())) {
       // reduceVertexIds dereferences edgeList.back() on every rank, so it cannot cope

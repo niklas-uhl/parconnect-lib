@@ -29,6 +29,7 @@
 //Includes
 #include <mpi.h>
 #include <iostream>
+#include <string>
 #include <vector>
 
 //External includes
@@ -71,8 +72,8 @@ namespace conn
 
         /**
          * @brief                 populates the edge list vector
-         * @param[in]   fileName
          * @param[out]  edgelist
+         * @param[in]   fileNames  one or more sequence files, all built into a single graph
          * @details               Vertex ids are the 2-bit packed canonical (lexicographically
          *                        smaller of kmer and its reverse complement) kmer. 31 x 2 = 62
          *                        bits, so a vertex id is a single machine word -- which is why
@@ -83,14 +84,17 @@ namespace conn
          */
         template <typename E>
         void populateEdgeList( std::vector< std::pair<E, E> > &edgeList,
-            std::string &fileName,
+            const std::vector<std::string> &fileNames,
             const mxx::comm &comm)
         {
           //Initialize the map
           bliss::de_bruijn::de_bruijn_engine<NodeMapType> idx(comm);
 
-          //Build the de Bruijn graph as distributed map
-          idx.template build<SeqParser>(fileName, comm);
+          //Build the de Bruijn graph as distributed map. build() inserts into the map without
+          //clearing it and the node map merges the edges of a kmer that is already present, so
+          //several files accumulate into one graph, exactly as their concatenation would.
+          for (auto &fileName : fileNames)
+            idx.template build<SeqParser>(fileName, comm);
 
           auto it = idx.cbegin();
 
@@ -137,6 +141,17 @@ namespace conn
               edgeList.emplace_back(s, d);
             }
           }
+        }
+
+        /**
+         * @brief                 convenience overload for a single sequence file
+         */
+        template <typename E>
+        void populateEdgeList( std::vector< std::pair<E, E> > &edgeList,
+            const std::string &fileName,
+            const mxx::comm &comm)
+        {
+          populateEdgeList(edgeList, std::vector<std::string>{fileName}, comm);
         }
 
     };
