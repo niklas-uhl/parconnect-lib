@@ -115,9 +115,9 @@ int main(int argc, char** argv) {
     spdlog::stopwatch total;
 
     // ---------------------------------------------------------------- generate
-    // The edge list this produces is already symmetric -- each edge is emitted once
-    // from each endpoint -- and its vertex ids are 2-bit packed canonical 31-mers,
-    // hence sparse in [0, 2^62).
+    // Vertex ids are 2-bit packed canonical 31-mers, hence sparse in [0, 2^62). Every
+    // k-mer emits its own incident edges, so a clean read set yields a symmetric edge
+    // list, but see the symmetrisation below for why that cannot be relied upon.
     spdlog::stopwatch phase;
     std::vector<Edge> edges;
     {
@@ -138,8 +138,34 @@ int main(int argc, char** argv) {
       MPI_Abort(comm, 1);
     }
 
+    // ---------------------------------------------------------------- symmetrise
+    // BLISS stores a k-mer's incident edges as a DNA16 bit mask of the neighbouring
+    // base, and DNA16 encodes 'N' as 0b1111. A k-mer that sits next to an 'N' in a read
+    // therefore claims a neighbour for all four bases, while the only neighbour that is
+    // ever inserted as a vertex is the one that reads the 'N' as an 'A' (the 2-bit DNA
+    // alphabet maps every non-ACGT character to 'A'). Those three phantom edges have no
+    // counterpart at the other endpoint, so the raw edge list of a read set containing
+    // 'N' is *not* symmetric.
+    //
+    // That has to be repaired here, before relabelling: reduceVertexIds() numbers the
+    // source and the target layer independently and its two numberings only agree when
+    // both layers contain the same set of vertices. A single one-sided edge shifts the
+    // two numberings apart and scrambles the whole graph, not just that one edge.
+    //
+    // Duplicates are not a problem, they are removed by the repartitioning below.
+    phase.reset();
+    {
+      const std::size_t forward = edges.size();
+      edges.reserve(2 * forward);
+      for (std::size_t i = 0; i < forward; ++i) {
+        edges.emplace_back(edges[i].second, edges[i].first);
+      }
+    }
+    log(fmt::format("Symmetrised to {} directed edges in {:.3}s", global_sum(edges.size(), comm),
+                    phase));
+
     // ------------------------------------------------------------- relabel ids
-    // Compacts the packed-kmer ids to [0, n). Because the edge list is symmetric, the
+    // Compacts the packed-kmer ids to [0, n). The edge list is symmetric, so the
     // independent numberings this assigns to the source and target layers agree.
     // Leaves the edge list globally sorted by source, block-distributed by edge count.
     phase.reset();
